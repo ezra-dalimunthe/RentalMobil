@@ -26,8 +26,9 @@ class CarController extends Controller
 
     public function source()
     {
+
         $query = Car::query();
-        $query->with(['manufacture', 'image']);
+        $query->with(['manufacture', 'images']);
         return DataTables::eloquent($query)
             ->filter(function ($query) {
                 if (request()->has('search')) {
@@ -63,9 +64,7 @@ class CarController extends Controller
             ->addColumn('description', function ($data) {
                 return str_limit(strip_tags($data->description, 50));
             })
-            ->addColumn('image-path', function ($data) {
-                return str_limit(strip_tags($data->image, 50));
-            })
+
             ->addIndexColumn()
             ->addColumn('action', 'backend.car.index-action')
             ->rawColumns(['action', 'status'])
@@ -85,13 +84,14 @@ class CarController extends Controller
             $car = $this->car->create($request->all());
             $no = 1;
             foreach ($request->image as $row) {
-                $fileName = Str::uuid();
-                $file = $row->storeAs(
-                    'public/image/car', $fileName . '.' . $row->extension()
-                );
+                $fileName = Str::uuid() . '.' . $row->extension();
+                $path = public_path(\App\CarImage::IMAGE_PATH);
+
+                $file = $row->move($path, $fileName);
+
                 $this->image->create([
                     'car_id' => $car->id,
-                    'image' => 'storage/image/car/' . $fileName . '.' . $row->extension(),
+                    'image' => $fileName,
                 ]);
             }
             DB::commit();
@@ -112,7 +112,7 @@ class CarController extends Controller
 
     public function edit($id)
     {
-        $data = $this->car->find($id);
+        $data = $this->car->findOrFail($id);
         return view('backend.car.edit', compact('data'));
 
     }
@@ -127,7 +127,7 @@ class CarController extends Controller
 
             foreach ($request->image as $row) {
                 $fileName = Str::uuid() . '.' . $row->extension();
-                $path = public_path(\App\CarImage::IMAGE_PATH) ;
+                $path = public_path(\App\CarImage::IMAGE_PATH);
 
                 $file = $row->move($path, $fileName);
 
@@ -143,22 +143,40 @@ class CarController extends Controller
 
     public function destroy($id)
     {
-        $this->car->destroy($id);
-        return redirect()->route('car.index')->with('success-message', 'Data telah dihapus');
+        $car = Car::withCount("transactions")->find($id);
+
+        if ($car == null) {
+            //already deleted by someone else
+            return response(null, 204);
+        }
+
+        if ($car->transactions_count > 0) {
+            // do softdelete since this has many transaction.
+            $car->delete();
+        } else {
+            $car->forceDelete();
+        }
+
+        return response(null, 204);
 
     }
 
     public function getImage($id)
     {
         $model = $this->image->where('car_id', $id)->get();
-
         return response()->json($model);
-
     }
 
     public function destroyImage($id)
     {
-        $this->image->destroy($id);
+        $image = CarImage::find($id);
+        if ($image == null) {
+            //already deleted by someone else
+            return response(null, 204);
+        }
+
+        $image->forceDelete();
+        return response(null, 204);
     }
 
 }

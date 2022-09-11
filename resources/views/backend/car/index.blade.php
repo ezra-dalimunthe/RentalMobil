@@ -28,10 +28,16 @@
 @push('scripts')
     <script src="{{ asset('backend/js/sweet-alert.min.js') }}"></script>
     <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+        var $table;
         $(document).ready(function() {
 
             $.fn.dataTable.ext.errMode = 'throw';
-            var $table = $('#car-table').DataTable({
+            $table = $('#car-table').DataTable({
                 processing: true,
                 serverSide: true,
                 responsive: true,
@@ -132,8 +138,21 @@
                     })
                     .then((willDelete) => {
                         if (willDelete) {
-                            swal("Data anda terhapus");
-                            window.location.replace(delete_link);
+
+                            $.ajax({
+                                url: delete_link,
+                                type: 'DELETE',
+                                xhrFields: {
+                                    withCredentials: true
+                                },
+                                success: function(result) {
+                                    $table.ajax.reload();
+                                    swal("Data anda terhapus");
+                                }
+                            });
+
+
+
                         } else {
                             swal("Data anda aman");
                         }

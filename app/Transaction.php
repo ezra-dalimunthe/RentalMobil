@@ -23,6 +23,6 @@ class Transaction extends Model
 
     public function car()
     {
-        return $this->belongsTo('App\Car');
+        return $this->belongsTo('App\Car')->withTrashed();
     }
 }

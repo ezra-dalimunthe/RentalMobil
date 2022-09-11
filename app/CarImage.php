@@ -17,6 +17,19 @@ class CarImage extends Model
     public $incrementing = false;
     public $appends = ["imageUrl"];
     const IMAGE_PATH = "/image/car/";
+
+    public static function boot()
+    {
+
+        parent::boot();
+        static::deleted(function ($model) {
+            if ($model->isForceDeleting()) {
+                //remove image file on disk;
+                $file = public_path(\App\CarImage::IMAGE_PATH . $model->image);
+                unlink($file);
+            }
+        });
+    }
     public function car()
     {
         return $this->belongsTo('App\Car');
