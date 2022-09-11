@@ -3,13 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Car;
-use Illuminate\Http\Request;
-use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Storage;
 use App\CarImage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Yajra\DataTables\Facades\DataTables;
 
 class CarController extends Controller
 {
@@ -26,19 +24,20 @@ class CarController extends Controller
         return view('backend.car.index');
     }
 
-    public function source(){
-        $query= Car::query();
-        $query->with(['manufacture']);
+    public function source()
+    {
+        $query = Car::query();
+        $query->with(['manufacture', 'image']);
         return DataTables::eloquent($query)
-        ->filter(function ($query) {
-            if (request()->has('search')) {
-                $query->where(function ($q) {
-                    $q->where('name', 'LIKE', '%' . request('search')['value'] . '%');
-                });
-            }
+            ->filter(function ($query) {
+                if (request()->has('search')) {
+                    $query->where(function ($q) {
+                        $q->where('name', 'LIKE', '%' . request('search')['value'] . '%');
+                    });
+                }
             })
             ->addColumn('name', function ($data) {
-                return str_limit($data->name,50);
+                return str_limit($data->name, 50);
             })
             ->addColumn('manufacture', function ($data) {
                 return title_case($data->manufacture->name);
@@ -53,20 +52,23 @@ class CarController extends Controller
                 return $data->year;
             })
             ->addColumn('price', function ($data) {
-                return number_format($data->price,0,',','.');
+                return number_format($data->price, 0, ',', '.');
             })
             ->addColumn('penalty', function ($data) {
-                return number_format($data->penalty,0,',','.');
+                return number_format($data->penalty, 0, ',', '.');
             })
             ->addColumn('status', function ($data) {
-                return $data->status == 'tersedia' ? '<span class="badge badge-success">'.$data->status.'</span>':'<span class="badge badge-secondary">'.$data->status.'</span>';
+                return $data->status == 'tersedia' ? '<span class="badge badge-success">' . $data->status . '</span>' : '<span class="badge badge-secondary">' . $data->status . '</span>';
             })
             ->addColumn('description', function ($data) {
-                return str_limit(strip_tags($data->description,50));
+                return str_limit(strip_tags($data->description, 50));
+            })
+            ->addColumn('image-path', function ($data) {
+                return str_limit(strip_tags($data->image, 50));
             })
             ->addIndexColumn()
             ->addColumn('action', 'backend.car.index-action')
-            ->rawColumns(['action','status'])
+            ->rawColumns(['action', 'status'])
             ->toJson();
     }
 
@@ -79,26 +81,25 @@ class CarController extends Controller
     {
         DB::beginTransaction();
         try {
-            $request = $request->merge(['slug'=> str_slug($request->name),'status'=>'tersedia']);
+            $request = $request->merge(['slug' => str_slug($request->name), 'status' => 'tersedia']);
             $car = $this->car->create($request->all());
-            $no=1;
-            foreach($request->image as $row){
+            $no = 1;
+            foreach ($request->image as $row) {
                 $fileName = Str::uuid();
                 $file = $row->storeAs(
-                    'public/image/car',$fileName.'.'.$row->extension()
+                    'public/image/car', $fileName . '.' . $row->extension()
                 );
                 $this->image->create([
-                    'car_id'=>$car->id,
-                    'image'=>'storage/image/car/'.$fileName.'.'.$row->extension()
+                    'car_id' => $car->id,
+                    'image' => 'storage/image/car/' . $fileName . '.' . $row->extension(),
                 ]);
             }
             DB::commit();
-            return redirect()->route('car.index')->with('success-message','Data telah disimpan');
+            return redirect()->route('car.index')->with('success-message', 'Data telah disimpan');
         } catch (\exception $e) {
             DB::rollback();
-            return redirect()->route('car.index')->with('error-message',$e->getMessage());
+            return redirect()->route('car.index')->with('error-message', $e->getMessage());
         }
-
 
     }
 
@@ -112,43 +113,52 @@ class CarController extends Controller
     public function edit($id)
     {
         $data = $this->car->find($id);
-        return view('backend.car.edit',compact('data'));
+        return view('backend.car.edit', compact('data'));
 
     }
 
     public function update(Request $request, $id)
     {
-        $request = $request->merge(['slug'=>str_slug($request->name)]);
-        if($request->has('image')){
-            foreach($request->image as $row){
-                $fileName = Str::uuid();
-                $file = $row->storeAs(
-                    'public/image/car',$fileName.'.'.$row->extension()
-                );
+        $rootPublicPath = url(\App\CarImage::IMAGE_PATH);
+
+        $request = $request->merge(['slug' => str_slug($request->name)]);
+        // dd($request->image);
+        if ($request->has('image')) {
+
+            foreach ($request->image as $row) {
+                $fileName = Str::uuid() . '.' . $row->extension();
+                $path = public_path(\App\CarImage::IMAGE_PATH) ;
+
+                $file = $row->move($path, $fileName);
+
                 $this->image->create([
-                    'car_id'=>$id,
-                    'image'=>'storage/image/car/'.$fileName.'.'.$row->extension()
+                    'car_id' => $id,
+                    'image' => $fileName,
                 ]);
             }
         }
         $this->car->find($id)->update($request->all());
-        return redirect()->route('car.index')->with('success-message','Data telah dirubah');
+        return redirect()->route('car.index')->with('success-message', 'Data telah dirubah');
     }
 
     public function destroy($id)
     {
-         $this->car->destroy($id);
-         return redirect()->route('car.index')->with('success-message','Data telah dihapus');
+        $this->car->destroy($id);
+        return redirect()->route('car.index')->with('success-message', 'Data telah dihapus');
 
     }
 
-    public function getImage($id){
-        return $this->image->where('car_id',$id)->get();
+    public function getImage($id)
+    {
+        $model = $this->image->where('car_id', $id)->get();
+
+        return response()->json($model);
+
     }
 
-    public function destroyImage($id){
+    public function destroyImage($id)
+    {
         $this->image->destroy($id);
     }
-
 
 }
