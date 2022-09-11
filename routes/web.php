@@ -48,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/car/source', 'CarController@source')->name('car.source');
     Route::get('/admin/car/{id}/edit', 'CarController@edit')->name('car.edit');
     Route::get('/admin/car/{id}/show', 'CarController@show')->name('car.show');
-    Route::get('/admin/car/{id}/destroy', 'CarController@destroy')->name('car.destroy');
+    Route::delete('/admin/car/{id}/destroy', 'CarController@destroy')->name('car.destroy');
     Route::post('/admin/car/store', 'CarController@store')->name('car.store');
     Route::post('/admin/car/{id}/update', 'CarController@update')->name('car.update');
     Route::get('/admin/car/{id}/getImage', 'CarController@getImage')->name('car.getImage');
@@ -106,3 +106,9 @@ Route::middleware(['auth'])->group(function () {
 Route::get('about', function () {
     return view("backend.dashboard.about");
 })->name("about");
+
+Route::get('test', function () {
+    $model = \App\Car::withTrashed()->find("4e8537df-641b-48d2-8d7a-17f3fb5cc82c");
+    $model->restore();
+    return response()->json(["model" => $model]);
+});
