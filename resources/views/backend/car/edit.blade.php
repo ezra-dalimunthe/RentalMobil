@@ -98,10 +98,8 @@
         $.getJSON("{{route('car.getImage',$data->id)}}", function(data){
             $.each(data, function(index,value){
                 var url = "{!! route('car.destroyImage','id') !!}";
-                var image = "{!! asset('image') !!}";
-
                 url = url.replace('id',value.id);
-                image = image.replace('image',value.image);
+                var image = value.imageUrl;
                 $('#loadImage').append('<div class="col-md-3">'+
                     '<div class="form-group">'+
                         '<div class="card bg-dark text-white shadow-sm">'+

@@ -46,11 +46,11 @@ $(document).ready(function () {
          dom: '<"toolbar">rtp',
          ajax: '{!! route('customer.source') !!}',
          columns: [
-            {data: 'DT_RowIndex', name: 'DT_RowIndex',width:"2%", orderable : false},
-            {data: 'nik', name: 'nik',width:"5%", orderable : true},
+            {data: 'DT_RowIndex', name: 'DT_RowIndex',width:"2%", orderable : false,  className: "text-right"},
+            {data: 'nik', name: 'nik',width:"5%", orderable : true },
             {data: 'name', name: 'name',width:"5%", orderable : true},
             {data: 'phone_number', name: 'phone_number',width:"5%", orderable : false},
-            {data: 'action', name: 'action',width:"2%", orderable : false}
+            {data: 'action', name: 'action',width:"2%", orderable : false,  className: "text-center"}
          ]
      });
 
