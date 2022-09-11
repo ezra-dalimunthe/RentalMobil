@@ -104,6 +104,12 @@
             </div>
         </div>
     </li>
+        <li class="nav-item {{active('about')}}">
+        <a class="nav-link" href="{{route('about')}}">
+            <i class="fas fa-fw fa-cog"></i>
+            <span>About</span>
+        </a>
+    </li>
 
 </ul>
 <!-- End of Sidebar -->
